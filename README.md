@@ -131,23 +131,25 @@ Each pack stops applying entirely — panel spacing returns to its own values, s
 | Fixture measurement: 390×844 coarse pointer, 1280×800 fine pointer zero-regression, opt-out | ✅ every pack (`node tools/check-pack.mjs`) |
 | Fixture measurement on Windows 11 + Chromium (`node tools/check-pack.mjs --desktop`) | ✅ every pack (2026-10-31, earlier suite: 87 passed / 0 failed / 8 skipped; the suite changed since — CI on `windows-latest` runs the current one) |
 | Real runtime on **dsh-mobile 0.8.0** | ✅ measured on the real gateway (390×844, coarse pointer, Plugins panel) — see `实测-0.8.0-20261031.md` in the workspace |
-| Real runtime on **main after #319** | ❌ no build contains it yet (verified 2026-10-31: latest release/tag/npm is v0.8.0); merge diff + a `check-pack` host-probe only |
+| Real runtime on **0.8.1 (ships #319)** | ✅ measured 2026-11-01 on a real 0.8.1 gateway: with **no packs** the panel is already 141/44/0 and 138/44/0 (0.8.0 baseline: 141/12.1/141 and 138/12.1/138); the host writes `data-dsh-panel="1"` and ships the 44px floor. See [`docs/0.8.1-宿主下限验证.md`](docs/0.8.1-宿主下限验证.md) |
 | Real runtime on **0.7.1** | ✅ historically (2026-10-31 earlier run); the 122px / 36→44px numbers were the same as 0.8.0 |
 | Physical device | ✅ Android App measured (2026-11-01, Redmi K90 Max / Android 17 / dsh-mobile App 0.7.1): with `core-panel` installed (or with the full set) the slot reaches 141/44/0 where the no-pack baseline is 141/14/141 (`dshmarket-mobile` alone only fixes the market root); real `env(safe-area-inset-*)` is 0 because this App is **not** edge-to-edge; the soft keyboard shrinks the viewport 786→472. See [`docs/真机验证.md`](docs/真机验证.md). iOS, thumb-reach feel and edge-to-edge apps remain unverified |
 
-### Two release lines: 0.8.0 vs main (#319)
+### Two release lines: 0.8.0 vs 0.8.1 (#319)
 
-`dsh-mobile` merged #319 on 2026-10-31 (`6c50b13`), **after** v0.8.0 was published (2026-10-30). No release contains it yet (checked 2026-10-31: latest release, latest tag and npm `latest` are all 0.8.0):
+`dsh-mobile` merged #319 on 2026-10-31 (`6c50b13`), after v0.8.0 was published (2026-10-30); **v0.8.1 (2026-11-01) is the first release that contains it**, and it was measured on 2026-11-01:
 
-| | release 0.8.0 | main after #319 |
+| | release 0.8.0 | release 0.8.1 (#319) |
 | --- | --- | --- |
-| host writes `data-dsh-panel` | **no** (grep: 0 hits) | yes, on `.dshm-main` |
-| 44px hit floor for plugin panel controls | **no** (94/94 controls < 44px measured) | yes, host-provided |
-| panel root width clamp | no | yes |
-| icon-only button `min-width` | no | **no** |
+| host writes `data-dsh-panel` | **no** (grep: 0 hits) | **yes**, on `.dshm-main` (measured `data-dsh-panel="1"`) |
+| 44px hit floor for plugin panel controls | **no** (141/141 and 138/138 <44px measured) | **yes** (no-pack baseline 141/44/0 and 138/44/0) |
+| panel root width clamp | no | **yes** (same rule block) |
+| icon-only button `min-width` | no | **yes** (the floor applies to `button`/`[role="button"]` with `min-width:44px`) |
 | bottom safe area on panel pages | no | **no** |
 
-`core-panel` therefore gates its height floor and width clamp on `.dshm-main:not([data-dsh-panel])`: on 0.8.x it is the only source, and on a host that owns that attribute it steps aside instead of duplicating (and never writes the host's attribute — it keeps its own `data-dshm-adapt-panel`). `check-pack` proves the gate with a simulated host-owned attribute (`runtime.hostGate.*`).
+Measured on 0.8.1: installing `core-panel`, `dshmarket-mobile`, or both does not change the numbers — the packs are a **no-op on 0.8.1+** and only matter for 0.8.0 and earlier. Method and the opt-out interplay: [`docs/0.8.1-宿主下限验证.md`](docs/0.8.1-宿主下限验证.md).
+
+`core-panel` therefore gates its height floor and width clamp on `.dshm-main:not([data-dsh-panel])`: on 0.8.0 and earlier it is the only source; on 0.8.1+ the host owns the attribute and the floor, and the pack steps aside as a measured no-op (and never writes the host's attribute — it keeps its own `data-dshm-adapt-panel`). `check-pack` proves the gate with a simulated host-owned attribute (`runtime.hostGate.*`).
 
 That is why the packs stay `experimental` rather than `candidate`. Measuring is a separate problem, and there is a tool for it: [`dsh-ui-lab`](https://github.com/LUgABeEEE/dsh-ui-lab) opens a DSH surface at real device proportions, captures a panel, and gates a matrix run on a pixel diff.
 
